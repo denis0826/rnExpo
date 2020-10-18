@@ -14,11 +14,10 @@ const ListViewItemSeparator = () => {
 
 export default function Notification() {
   const { state } = useStore();
-  console.log('state.todos', state.todos)
   return (
     <View style={styles.MainContainer}>
       <FlatList
-        data={state.todos}
+        data={state.notifications}
         renderSeparator={ListViewItemSeparator}
         keyExtractor={(_, index) => index.toString()}
         renderItem={({item}, i) => (
@@ -31,8 +30,7 @@ export default function Notification() {
               paddingBottom: 16,
             }}>
               <Text style={styles.textViewContainerHeading}>{item.title}</Text>
-              <Text>start: {dayjs(item.notificationStart).format('MMM-DD-YYYY LT')}</Text>
-              <Text>end: {dayjs(item.notificationEnd).format('MMM-DD-YYYY LT')}</Text>
+              <Text>{dayjs(item.date).format('MMM-DD-YYYY LT')}</Text>
             </View>
         )}
       />

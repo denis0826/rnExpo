@@ -26,29 +26,6 @@ console.ignoredYellowBox = [
   'Setting a timer'
 ]
 
-//GET ALL TODOS
-const schedules = [
-  {
-     title: 'Grocery',
-     notificationStart: dayjs(),
-     notificationEnd: dayjs().add(1, 'minute'),
-  },
-  {
-     title: 'Gym Class',
-     notificationStart: dayjs().add(5, 'minute'),
-     notificationEnd: dayjs().add(6, 'minute'),// add time here for testing
-  },
-  {
-     title: 'Movie Night',
-     shared: true,
-     matched: {
-      avatar: 'https://s3.amazonaws.com/uifaces/faces/twitter/adhamdannaway/128.jpg',
-      name: 'Dennis',
-     },
-     notificationStart: dayjs().add(10, 'minute'),
-     notificationEnd: dayjs().add(11, 'minute'),// add time here for testing
-  },
-]
 
 export default function Home({navigation}) {
   const { state, dispatch } = useStore();
@@ -81,6 +58,7 @@ export default function Home({navigation}) {
   }, []);
   
   const _handleAppStateChange = (nextAppState) => {
+    console.log('nextAppState', nextAppState)
     if (
       appState.current.match(/inactive|background/) &&
       nextAppState === "active"
@@ -97,18 +75,25 @@ export default function Home({navigation}) {
     const to = dayjs(date); //scheduled notification
     return to.diff(from, "seconds");
   }
+  function handleTodos(i, time, data) {
+    setTimeout(function() {
+      dispatch({ type: 'ADD_NOTIFICATION', payload: data })
+      dispatch({ type: 'REMOVE_TODO', payload: data.id })
+    }, time * 1000);
+  }
 
   async function sendPushNotification(expoPushToken) {
-    for await (const notif of schedules) {
+    for await (const [i, notif] of state.todos.entries()) {
       const remainingTime = generateRemainingTime(notif.date);
 
+      console.log('appStateVisible', appStateVisible)
       //Decide if the app is active/inactive to send the notifications
       if(appStateVisible === 'active'){
         //@todo CONVERT TO FIREBASE since we are sharing this notifications
-        setTimeout(() => {
-          dispatch({ type: 'LOCAL_NOTIFICATION', payload: notif })
-        }, remainingTime * 1000)
+        //OR NODEJS BACKEND FOR expo push notifications https://github.com/expo/expo-server-sdk-node
+        handleTodos(i, remainingTime, notif);
       }else{
+        handleTodos(i, remainingTime, notif);
         Notifications.scheduleNotificationAsync({
           content: {
             title: notif.title,
@@ -122,8 +107,6 @@ export default function Home({navigation}) {
     } 
   }
 
-
-  //@todo trigger the pushNotification at useEffect
   useEffect(() => {
     sendPushNotification();
   }, [])
@@ -143,16 +126,17 @@ export default function Home({navigation}) {
             <Ionicons name="ios-notifications-outline" size={40}/>
             {
               //global state
-              state.todos.length > 0 ?
+              state.notifications.length > 0 ?
                 <View style={styles.badge}>
-                  <Text style={{ color: 'white' }}>{state.todos.length}</Text>
+                  <Text style={{ color: 'white' }}>{state.notifications.length}</Text>
                 </View> : null
             }
           </View>
         </TouchableOpacity>
       </View>
       {
-        schedules.map((sched, i) => {
+        state.todos.length ?
+        state.todos.map((sched, i) => {
           return (
             <Card  key={i} containerStyle={styles.cardview} >
               <View>
@@ -168,12 +152,14 @@ export default function Home({navigation}) {
                     containerStyle={styles.image}
                     source={{ uri: sched.matched.avatar }}
                   />)}
-                <Text>start: {dayjs(sched.notificationStart).format('MMM-DD-YYYY LT')}</Text>
-                <Text>end: {dayjs(sched.notificationEnd).format('MMM-DD-YYYY LT')}</Text>
+                <Text>{dayjs(sched.date).format('MMM-DD-YYYY LT')}</Text>
               </View>
             </Card>
           );
-        })
+        }) : <View style={styles.notodos}>
+              <Text>No Todos</Text>
+            </View>
+
       }
     </View>
   );
@@ -182,7 +168,7 @@ export default function Home({navigation}) {
 const styles = StyleSheet.create({
   view: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     padding: 30
   },
   viewAvatar: {
@@ -206,6 +192,14 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     justifyContent: 'center',
+    alignItems: 'center'
+  },
+  notodos: {
+    flex: 4, 
+    fontWeight: '800',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignContent: 'center',
     alignItems: 'center'
   }
 });
